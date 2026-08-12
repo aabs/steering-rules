@@ -1,4 +1,4 @@
-name: "compilers-rules"
+name: "cleanroom-swe-rules"
 version: "1.0.0"
 minSteergenVersion: "0.3.2"
 scope: project
