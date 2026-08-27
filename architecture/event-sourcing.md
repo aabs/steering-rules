@@ -44,3 +44,20 @@ Place workflows and side effects spanning aggregates or external systems in dura
 :::rule id="ES-07" mandatory="true" category="architecture" tags="evolution, compatibility"
 Do not change the meaning of a published event. Add compatible event data or provide an explicit replay-time transformation for historical versions.
 :::
+
+
+:::rule id="ES-ADVICE-01" mandatory="false" category="modelling" tags="events, domain-language"
+Name events as completed business facts and include enough stable domain context to explain why the transition mattered.
+:::
+
+:::rule id="ES-ADVICE-02" mandatory="false" category="modelling" tags="events, granularity"
+Do not emit events for incidental implementation changes; emit facts that are meaningful to the domain and future consumers.
+:::
+
+:::rule id="ES-ADVICE-03" mandatory="false" category="operations" tags="snapshots"
+Use snapshots only to address demonstrated replay cost; snapshots never replace the event stream as the recovery source.
+:::
+
+:::rule id="ES-ADVICE-04" mandatory="false" category="modelling" tags="time"
+Represent effective business time separately from recorded time only when the domain requires temporal reasoning.
+:::
