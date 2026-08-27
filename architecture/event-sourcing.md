@@ -6,66 +6,41 @@ scope: project
 status: active
 ---
 
-:::rule id="ES-CORE-01" mandatory="true" category="architecture" tags="event-sourcing, source-of-truth, history"
-For an event-sourced aggregate, its ordered event stream is the authoritative, immutable history of domain facts; current state is derived by replaying that history.
+:::rule id="ES-00" mandatory="false" category="architecture" tags="aggregate, invariants"
+## Event-sourcing model
+
+- An aggregate’s event stream is its authoritative historical record.
+- Aggregate state is rehydrated by applying its events in stream order.
+- Events record completed domain facts, rather than commands or persistence mutations.
+- Read models and snapshots are derived data and may be rebuilt.
+- A stream normally corresponds to one aggregate consistency boundary.
+- Technical metadata, such as correlation and causation identifiers, is separate from domain event payloads.
 :::
 
-:::rule id="ES-CORE-02" mandatory="true" category="architecture" tags="events, domain-language, semantics"
-Events represent completed, domain-significant facts, expressed in ubiquitous language and independently of persistence or transport concerns.
+:::rule id="ES-01" mandatory="true" category="architecture" tags="aggregate, invariants"
+Evaluate a command and enforce its invariants within one aggregate boundary before appending its resulting events.
 :::
 
-:::rule id="ES-CORE-03" mandatory="true" category="architecture" tags="events, granularity, contracts"
-Record the meaningful business fact needed to explain a state transition; do not model events as database updates, implementation details, commands, or noise.
+:::rule id="ES-02" mandatory="true" category="architecture" tags="aggregate, dependencies"
+Do not perform synchronous I/O, query other aggregates, call external services, or read ambient mutable state while an aggregate decides a command.
 :::
 
-:::rule id="ES-CORE-04" mandatory="true" category="architecture" tags="aggregate, consistency, invariants"
-An aggregate is a single consistency boundary: it owns its state and events, evaluates commands against its rehydrated state, enforces its invariants, then emits resulting events.
+:::rule id="ES-03" mandatory="true" category="architecture" tags="replay, determinism"
+Keep event-application code deterministic and side-effect free; it must not depend on the current time, random values, network calls, or mutable global state.
 :::
 
-:::rule id="ES-CORE-05" mandatory="true" category="architecture" tags="aggregate, autonomy, dependencies"
-Aggregate decision-making must use only command input, aggregate state, and domain rules within its boundary; it must not depend on synchronous external reads or ambient state.
+:::rule id="ES-04" mandatory="true" category="architecture" tags="concurrency, streams"
+Append events with an expected stream version and handle concurrency conflicts explicitly; never silently overwrite or merge competing aggregate decisions.
 :::
 
-:::rule id="ES-CORE-06" mandatory="true" category="architecture" tags="replay, determinism, side-effects"
-Event application and aggregate rehydration must be deterministic, side-effect free, and independent of wall-clock time.
+:::rule id="ES-05" mandatory="true" category="architecture" tags="projections, idempotency"
+Keep projections outside aggregate decision logic, make them rebuildable from events, and ensure they tolerate at-least-once delivery.
 :::
 
-:::rule id="ES-CORE-07" mandatory="true" category="architecture" tags="ordering, concurrency, streams"
-Preserve order within an aggregate stream and use optimistic concurrency, such as expected-version checks, to reject conflicting appends.
+:::rule id="ES-06" mandatory="true" category="architecture" tags="integration, process-manager"
+Place workflows and side effects spanning aggregates or external systems in durable process logic; do not coordinate them inside an aggregate.
 :::
 
-:::rule id="ES-CORE-08" mandatory="true" category="architecture" tags="cqrs, projections, derivation"
-Read models are derived views, not sources of truth; keep projections separate from aggregate decision logic and make them rebuildable from event history.
-:::
-
-:::rule id="ES-CORE-09" mandatory="true" category="architecture" tags="projections, idempotency, ordering"
-Projection handlers must tolerate duplicate delivery and must not rely on a global order across independent streams.
-:::
-
-:::rule id="ES-CORE-10" mandatory="true" category="architecture" tags="evolution, compatibility, replay"
-Treat event schemas as long-lived contracts; evolve them compatibly where possible, and use explicit version-aware transformation when required to preserve replayability.
-:::
-
-:::rule id="ES-CORE-11" mandatory="true" category="architecture" tags="metadata, observability, traceability"
-Keep technical metadata separate from domain event data, while retaining enough metadata for causation, correlation, versioning, and replay diagnosis.
-:::
-
-:::rule id="ES-CORE-12" mandatory="true" category="architecture" tags="process, integration, boundaries"
-Coordinate reactions that cross aggregate or service boundaries outside the originating aggregate, using durable asynchronous process logic where necessary.
-:::
-
-:::rule id="ES-ADVICE-01" mandatory="false" category="architecture" tags="snapshots, performance"
-Use snapshots only when replay cost creates a material latency, availability, or operational problem; treat every snapshot as disposable derived state.
-:::
-
-:::rule id="ES-ADVICE-02" mandatory="false" category="architecture" tags="saga, process-manager, workflow"
-Use a process manager or saga when a business workflow spans independent aggregate or service boundaries and requires durable coordination.
-:::
-
-:::rule id="ES-ADVICE-03" mandatory="false" category="architecture" tags="time, temporal-modelling"
-Model effective business time separately from recording time when the domain must reason about when a fact was true, rather than merely when it was stored.
-:::
-
-:::rule id="ES-ADVICE-04" mandatory="false" category="architecture" tags="upcasting, migration"
-Prefer additive, compatible event-contract evolution; introduce upcasting or translation only when compatibility cannot be maintained directly.
+:::rule id="ES-07" mandatory="true" category="architecture" tags="evolution, compatibility"
+Do not change the meaning of a published event. Add compatible event data or provide an explicit replay-time transformation for historical versions.
 :::
