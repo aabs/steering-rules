@@ -1,207 +1,115 @@
 ---
 id: streaming-architectures
-version: "1.0.0"
+version: "2.0.0"
 title: Streaming Architecture Rules
 scope: project
 status: active
 ---
 
-:::rule id="STREAM-01" mandatory="true" category="streaming" tags="streaming, architecture, contracts"
-Define every stream, topic, and event type with an explicit contract and clear business meaning.
+:::rule id="STREAM-01" mandatory="true" category="streaming" tags="contracts"
+Every stream event type shall have an explicit schema contract, a defined business meaning, and shall represent a fact that has already occurred; events shall not expose producer-internal implementation details.
 :::
 
-:::rule id="STREAM-02" mandatory="true" category="streaming" tags="streaming, ownership, producers"
-Assign each event type a single owning producer.
+:::rule id="STREAM-02" mandatory="true" category="streaming" tags="contracts, ownership"
+Each event type shall have a single designated owning producer responsible for its schema and publication; multiple uncoordinated producers of the same event type are prohibited.
 :::
 
-:::rule id="STREAM-03" mandatory="true" category="streaming" tags="streaming, semantics, events"
-Use stream events to represent facts that have already happened.
+:::rule id="STREAM-03" mandatory="true" category="streaming" tags="contracts, schema"
+Producers shall evolve event schemas in a backward-compatible manner; consumers shall tolerate unknown fields in forward-compatible schema versions and shall not reject events solely because they contain unrecognized fields.
 :::
 
-:::rule id="STREAM-04" mandatory="true" category="streaming" tags="streaming, boundaries, encapsulation"
-Do not use streams to expose internal implementation details.
+:::rule id="STREAM-04" mandatory="true" category="streaming" tags="validation, security"
+WHEN an event is received, the system shall validate its schema and verify its authorization before executing any processing logic; events that fail validation or authorization shall not be processed.
 :::
 
-:::rule id="STREAM-05" mandatory="true" category="streaming" tags="streaming, schema, versioning"
-Evolve stream contracts in a backward-compatible way whenever feasible.
+:::rule id="STREAM-05" mandatory="true" category="streaming" tags="delivery, idempotency"
+The system shall treat all stream delivery as at-least-once; every producer shall be safe to retry without creating duplicate business effects; every consumer and processor shall be idempotent or duplicate-safe.
 :::
 
-:::rule id="STREAM-06" mandatory="true" category="streaming" tags="streaming, schema, validation"
-Validate every inbound event before executing stream processing logic.
+:::rule id="STREAM-06" mandatory="true" category="streaming" tags="consistency, commit-order"
+The system shall not commit offsets, advance checkpoints, or publish derived downstream events until the owned state change or durable intent is committed.
 :::
 
-:::rule id="STREAM-07" mandatory="true" category="streaming" tags="streaming, trust, security"
-Treat every inbound event as untrusted until validation and authorization succeed.
+:::rule id="STREAM-07" mandatory="false" category="streaming" tags="consistency, outbox"
+WHERE state change and event publication must not diverge, the system shall use an outbox or equivalent durable intent pattern to guarantee both are committed atomically.
 :::
 
-:::rule id="STREAM-08" mandatory="true" category="streaming" tags="streaming, delivery, reliability"
-Assume events may be delayed, duplicated, reordered, or redelivered.
+:::rule id="STREAM-08" mandatory="false" category="streaming" tags="idempotency, deduplication"
+WHERE deduplication must survive process restarts and failover, the system shall use a durable processed-event record rather than in-memory state.
 :::
 
-:::rule id="STREAM-09" mandatory="true" category="streaming" tags="streaming, consumers, idempotency"
-Make every stream consumer and processor idempotent or duplicate-safe.
+:::rule id="STREAM-09" mandatory="true" category="streaming" tags="ordering, partitions"
+The system shall not assume global ordering across partitions, topics, or unrelated streams; processing logic shall rely only on ordering guarantees that are explicitly provided for the relevant partition or key.
 :::
 
-:::rule id="STREAM-10" mandatory="true" category="streaming" tags="streaming, producers, retries"
-Make every stream producer safe to retry without creating duplicate business effects.
+:::rule id="STREAM-10" mandatory="false" category="streaming" tags="ordering, partitions"
+WHERE events must be processed in a defined relative order, the system shall choose partition keys that co-locate all related events onto the same partition and distribute load predictably.
 :::
 
-:::rule id="STREAM-11" mandatory="true" category="streaming" tags="streaming, offsets, commit-order"
-Do not commit offsets, checkpoints, or acknowledgements before the owned state change is committed.
+:::rule id="STREAM-11" mandatory="true" category="streaming" tags="topology"
+Stream topologies shall be built from explicit named processing stages, each with declared input and output event types and a single defined responsibility.
 :::
 
-:::rule id="STREAM-12" mandatory="true" category="streaming" tags="streaming, consistency, publication"
-Do not publish downstream events until the state change or durable intent that justifies them is secured.
+:::rule id="STREAM-12" mandatory="true" category="streaming" tags="state"
+WHEN a processor maintains local state, the processor shall exclusively own that state; state reads, updates, and output emissions shall be atomic within the processor's consistency boundary.
 :::
 
-:::rule id="STREAM-13" mandatory="false" category="streaming" tags="streaming, outbox, consistency"
-Use an outbox or equivalent durable intent pattern when state change and publication must not diverge.
+:::rule id="STREAM-13" mandatory="true" category="streaming" tags="time-semantics"
+Each processing flow shall declare whether it operates on event time, processing time, or ingestion time; different time semantics shall not be mixed within the same processing flow without an explicit conversion step.
 :::
 
-:::rule id="STREAM-14" mandatory="false" category="streaming" tags="streaming, deduplication, inbox"
-Use a durable processed-event record when deduplication must survive restarts and failover.
+:::rule id="STREAM-14" mandatory="false" category="streaming" tags="time-semantics, windows"
+WHERE windowed computation is used, the system shall define the window type, boundaries, trigger conditions, allowed lateness, and output semantics explicitly.
 :::
 
-:::rule id="STREAM-15" mandatory="true" category="streaming" tags="streaming, ordering, partitions"
-Do not assume global ordering across partitions, topics, or unrelated streams.
+:::rule id="STREAM-15" mandatory="true" category="streaming" tags="time-semantics, late-events"
+WHEN a processing flow performs time-dependent operations such as windowing, aggregation, or temporal joins, the system shall define the handling behavior for late, missing, and out-of-order events.
 :::
 
-:::rule id="STREAM-16" mandatory="true" category="streaming" tags="streaming, ordering, keys"
-Rely only on ordering guarantees that are explicit for the relevant partition or key.
+:::rule id="STREAM-16" mandatory="true" category="streaming" tags="determinism, replay"
+Stream processing logic shall be deterministic and free of hidden side effects; reprocessing the same ordered input for a given partition shall produce the same derived state and outputs; replay shall not generate new business effects beyond reprocessing original facts.
 :::
 
-:::rule id="STREAM-17" mandatory="true" category="streaming" tags="streaming, partitioning, keys"
-Choose partition keys that preserve required ordering and distribute load predictably.
+:::rule id="STREAM-17" mandatory="true" category="streaming" tags="joins"
+WHEN streams are joined, the system shall define key alignment, time alignment, and the handling of late or unmatched events before the join is implemented.
 :::
 
-:::rule id="STREAM-18" mandatory="true" category="streaming" tags="streaming, processors, responsibility"
-Keep each stream processor responsible for one clear transformation, reaction, or aggregation.
+:::rule id="STREAM-18" mandatory="true" category="streaming" tags="enrichment"
+WHEN a stream is enriched with external data, the system shall define the data freshness requirement, consistency guarantee, and failure behavior explicitly.
 :::
 
-:::rule id="STREAM-19" mandatory="true" category="streaming" tags="streaming, topology, composition"
-Build stream topologies from explicit processing stages with clear input and output contracts.
+:::rule id="STREAM-19" mandatory="true" category="streaming" tags="failures, retries"
+WHEN a stream processing failure occurs, the system shall classify it before retrying; the system shall retry only failures classified as transient and safe to retry; validation, schema, authorization, and business rule failures shall not be retried.
 :::
 
-:::rule id="STREAM-20" mandatory="true" category="streaming" tags="streaming, state, ownership"
-Each stateful processor must exclusively own and manage its local processing state.
+:::rule id="STREAM-20" mandatory="true" category="streaming" tags="failures, dead-letter"
+WHEN an event repeatedly fails processing up to the configured retry limit, the system shall route it to an explicit dead-letter or quarantine destination rather than retrying indefinitely.
 :::
 
-:::rule id="STREAM-21" mandatory="true" category="streaming" tags="streaming, stateful-processing, consistency"
-Keep each stateful processing step atomic within its own consistency boundary.
+:::rule id="STREAM-21" mandatory="true" category="streaming" tags="side-effects"
+WHEN a stream processor performs irreversible external side effects, the system shall ensure those effects are idempotent or protected against duplicate execution; side effects shall be triggered only after all validation and commit preconditions succeed.
 :::
 
-:::rule id="STREAM-22" mandatory="true" category="streaming" tags="streaming, time, event-time"
-Define whether each processing flow uses event time, processing time, or ingestion time.
+:::rule id="STREAM-22" mandatory="true" category="streaming" tags="throughput, backpressure"
+WHEN downstream processing cannot safely keep up with inbound throughput, the system shall apply back-pressure or throttling; consumer lag shall not grow without explicit retention bounds and operator-visible alerting.
 :::
 
-:::rule id="STREAM-23" mandatory="true" category="streaming" tags="streaming, timestamps, semantics"
-Do not mix time semantics implicitly within the same processing flow.
+:::rule id="STREAM-23" mandatory="true" category="streaming" tags="observability"
+Each event shall carry a stable unique event identifier and a causation or correlation identifier to support deduplication, tracing, and lineage across stream topologies.
 :::
 
-:::rule id="STREAM-24" mandatory="false" category="streaming" tags="streaming, watermarks, lateness"
-Use explicit lateness and progress rules when correctness depends on event-time completeness.
+:::rule id="STREAM-24" mandatory="true" category="streaming" tags="observability"
+The system shall emit structured telemetry recording throughput, consumer lag, retry counts, dropped events, late event counts, and final event disposition for each processing stage.
 :::
 
-:::rule id="STREAM-25" mandatory="false" category="streaming" tags="streaming, windows"
-Use windows only when the business calculation is explicitly window-bounded.
+:::rule id="STREAM-25" mandatory="true" category="streaming" tags="security"
+Events shall not contain secrets, credentials, or unencrypted sensitive personal data; WHEN sensitive data must be included in an event payload, the field shall be encrypted and access shall be explicitly authorized.
 :::
 
-:::rule id="STREAM-26" mandatory="true" category="streaming" tags="streaming, windows, semantics"
-Define window boundaries, triggers, and output semantics explicitly for every windowed computation.
+:::rule id="STREAM-26" mandatory="false" category="streaming" tags="security, provenance"
+WHERE downstream processing decisions depend on the authorization context or provenance of an event, the system shall preserve that context within the event payload or a linked audit record.
 :::
 
-:::rule id="STREAM-27" mandatory="true" category="streaming" tags="streaming, late-events"
-Define how late, missing, or out-of-order events must be handled.
-:::
-
-:::rule id="STREAM-28" mandatory="true" category="streaming" tags="streaming, replay, semantics"
-Replay must not create new business meaning beyond reprocessing the original facts.
-:::
-
-:::rule id="STREAM-29" mandatory="true" category="streaming" tags="streaming, replay, determinism"
-Reprocessing the same ordered input for a partition must produce the same derived state and outputs.
-:::
-
-:::rule id="STREAM-30" mandatory="true" category="streaming" tags="streaming, determinism, logic"
-Keep stream processing logic deterministic and free of hidden side effects.
-:::
-
-:::rule id="STREAM-31" mandatory="true" category="streaming" tags="streaming, joins, correctness"
-Do not join streams unless key alignment, time alignment, and late-event behavior are explicitly defined.
-:::
-
-:::rule id="STREAM-32" mandatory="true" category="streaming" tags="streaming, reference-data, enrichment"
-Do not enrich a stream with external data unless consistency, freshness, and failure behavior are explicitly defined.
-:::
-
-:::rule id="STREAM-33" mandatory="true" category="streaming" tags="streaming, retries, classification"
-Classify stream processing failures explicitly before deciding whether to retry.
-:::
-
-:::rule id="STREAM-34" mandatory="true" category="streaming" tags="streaming, retries, transient"
-Retry only failures that are known to be transient and safe to retry.
-:::
-
-:::rule id="STREAM-35" mandatory="true" category="streaming" tags="streaming, retries, non-transient"
-Do not retry validation, authorization, schema, or business rule failures indefinitely.
-:::
-
-:::rule id="STREAM-36" mandatory="true" category="streaming" tags="streaming, poison-events"
-Do not retry the same failing event indefinitely without quarantine or escalation.
-:::
-
-:::rule id="STREAM-37" mandatory="false" category="streaming" tags="streaming, dead-letter, quarantine"
-Move repeatedly failing events to explicit dead-letter or quarantine handling.
-:::
-
-:::rule id="STREAM-38" mandatory="true" category="streaming" tags="streaming, side-effects, safety"
-Do not perform irreversible side effects from a stream processor unless duplicate execution is prevented or harmless.
-:::
-
-:::rule id="STREAM-39" mandatory="true" category="streaming" tags="streaming, side-effects, ordering"
-Perform external side effects only after validation and commit preconditions succeed.
-:::
-
-:::rule id="STREAM-40" mandatory="true" category="streaming" tags="streaming, throughput, backpressure"
-Apply back-pressure or throttling when downstream processing cannot keep up safely.
-:::
-
-:::rule id="STREAM-41" mandatory="true" category="streaming" tags="streaming, throughput, lag"
-Do not allow unbounded consumer lag without explicit retention, expiry, or operator-visible consequences.
-:::
-
-:::rule id="STREAM-42" mandatory="false" category="streaming" tags="streaming, expiry, retention"
-Use explicit retention or expiry rules when late processing can no longer produce a correct business outcome.
-:::
-
-:::rule id="STREAM-43" mandatory="true" category="streaming" tags="streaming, observability, identifiers"
-Attach a stable event identifier to every event.
-:::
-
-:::rule id="STREAM-44" mandatory="true" category="streaming" tags="streaming, observability, correlation"
-Attach causation or correlation identifiers to support tracing across stream topologies.
-:::
-
-:::rule id="STREAM-45" mandatory="true" category="streaming" tags="streaming, observability, telemetry"
-Record throughput, lag, retries, dropped events, late events, and final disposition as structured telemetry.
-:::
-
-:::rule id="STREAM-46" mandatory="true" category="streaming" tags="streaming, security, provenance"
-Preserve provenance and authorization-relevant context where downstream decisions depend on it.
-:::
-
-:::rule id="STREAM-47" mandatory="true" category="streaming" tags="streaming, security, data"
-Do not place secrets or sensitive data in stream events unless explicitly required and protected.
-:::
-
-:::rule id="STREAM-48" mandatory="true" category="streaming" tags="streaming, schema, tolerance"
-Consumers must ignore unknown forward-compatible fields unless the contract explicitly forbids them.
-:::
-
-:::rule id="STREAM-49" mandatory="true" category="streaming" tags="streaming, testing, reliability"
-Test replay, redelivery, partition rebalancing, lag, out-of-order delivery, late events, joins, and failure recovery deliberately.
-:::
-
-:::rule id="STREAM-50" mandatory="true" category="streaming" tags="streaming, simplicity"
-Prefer the simplest streaming topology and state model that satisfies the required correctness and latency needs.
+:::rule id="STREAM-27" mandatory="true" category="streaming" tags="testing"
+The system shall include deliberate tests covering replay, duplicate delivery, partition rebalancing, consumer lag, out-of-order events, late events, stream joins, and failure recovery for every critical stream processing path.
 :::
